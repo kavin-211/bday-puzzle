@@ -114,6 +114,16 @@ const DB = {
             user.installed = true;
             this.save(data);
         }
+    },
+    deleteHistory(email, index) {
+        const data = this.get();
+        const user = data.find(u => u.email === email);
+        if (user && user.history[index]) {
+            user.history.splice(index, 1);
+            this.save(data);
+            return user; // Return updated user
+        }
+        return null;
     }
 };
 
@@ -275,12 +285,14 @@ const UI = {
         this.screens.login.classList.remove('hidden');
         this.screens.start.classList.add('hidden');
         this.screens.game.classList.add('hidden');
+        document.body.style.backgroundImage = `url('assets/images/stage_1.png')`;
     },
     
     showStartModal() {
         this.screens.login.classList.add('hidden');
         this.screens.game.classList.add('hidden');
         this.screens.start.classList.remove('hidden');
+        document.body.style.backgroundImage = `url('assets/images/stage_1.png')`;
     },
     
     startGame(user) {
@@ -299,6 +311,7 @@ const UI = {
             this.screens.admin.classList.remove('hidden');
             this.screens.login.classList.add('hidden');
             this.screens.start.classList.add('hidden');
+            document.body.style.backgroundImage = `url('assets/images/stage_1.png')`; // Default bg for admin
         }
     },
     
@@ -340,19 +353,56 @@ const UI = {
         const modal = this.screens.history;
         document.getElementById('history-user-title').textContent = `${user.email.split('@')[0]}'s History`;
         const tbody = document.getElementById('history-tbody');
-        tbody.innerHTML = user.history.map(h => {
-            const inT = new Date(h.inTime).toLocaleString();
-            const outT = h.outTime ? new Date(h.outTime).toLocaleString() : 'Active/Crash';
-            const dur = h.duration || '-';
-            return `
-                <tr>
-                    <td>${new Date(h.inTime).toLocaleDateString()}</td>
-                    <td>${inT.split(',')[1]}</td>
-                    <td>${outT.includes('/') ? outT.split(',')[1] : outT}</td>
-                    <td>${dur}</td>
-                </tr>
-            `;
-        }).reverse().join(''); // Show newest first
+        
+        const renderRows = (u) => {
+            tbody.innerHTML = u.history.map((h, i) => {
+                const inT = new Date(h.inTime).toLocaleString();
+                const outT = h.outTime ? new Date(h.outTime).toLocaleString() : 'Active/Crash';
+                const dur = h.duration || '-';
+                // Use data-index to track original index for deletion, but note we reverse map for display?
+                // Actually, if we map then reverse, the index 'i' is the original index if we DON'T reverse first.
+                // Let's map first then reverse logic in display, or just render normally.
+                // To keep it simple and consistent with "Show newest first", we need to handle index carefully.
+                // Let's create the array with original indices first.
+                return { h, originalIndex: i };
+            }).reverse().map(item => {
+                const { h, originalIndex } = item;
+                const inT = new Date(h.inTime).toLocaleString();
+                const outT = h.outTime ? new Date(h.outTime).toLocaleString() : 'Active/Crash';
+                const dur = h.duration || '-';
+                
+                return `
+                    <tr>
+                        <td>${new Date(h.inTime).toLocaleDateString()}</td>
+                        <td>${inT.split(',')[1]}</td>
+                        <td>${outT.includes('/') ? outT.split(',')[1] : outT}</td>
+                        <td>${dur}</td>
+                        <td class="delete-cell">
+                            <button class="delete-btn" data-email="${u.email}" data-index="${originalIndex}" title="Delete Record">
+                                🗑️
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            // Re-bind delete events
+            const deleteBtns = tbody.querySelectorAll('.delete-btn');
+            deleteBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    if(confirm('Are you sure you want to delete this record?')) {
+                        const email = e.target.closest('button').dataset.email;
+                        const idx = parseInt(e.target.closest('button').dataset.index);
+                        const updatedUser = DB.deleteHistory(email, idx);
+                        if (updatedUser) {
+                            renderRows(updatedUser); // Re-render with updated user data
+                        }
+                    }
+                });
+            });
+        };
+        
+        renderRows(user);
         
         modal.classList.remove('hidden');
     },
@@ -418,17 +468,37 @@ const Game = {
     },
 
     loadLevel(level) {
-        const size = CONFIG.baseGrid + (level - 1);
-        this.state.gridSize = size;
-        this.state.rows = size;
-        this.state.cols = size;
+        // Safe check for asset existence
+        const assetIndex = (level - 1) % ASSETS.length;
+        const assetUrl = ASSETS[assetIndex];
         
-        const assetUrl = ASSETS[(level - 1) % ASSETS.length];
+        // Update Body Background
+        document.body.style.backgroundImage = `url('${assetUrl}')`;
         
         this.img = new Image();
         this.img.src = assetUrl;
         
         this.img.onload = () => {
+            // Calculate grid size to ensure roughly square pieces
+            // Base total pieces ~ 64 for level 1, increasing slightly or keeping manageable
+            // Level 1: ~64 pieces (8x8 if square)
+            // Level 2: ~80 pieces
+            // Level 3: ~100 pieces?
+            
+            // Let's define a target piece count base
+            const basePieces = 30 + (level * 15); // L1=45, L2=60, L3=75... keeping it mobile friendly
+            
+            const imgRatio = this.img.width / this.img.height;
+            
+            // rows * cols = total
+            // cols / rows = imgRatio  => cols = rows * imgRatio
+            // rows * (rows * imgRatio) = total
+            // rows^2 = total / imgRatio
+            // rows = sqrt(total / imgRatio)
+            
+            this.state.rows = Math.max(3, Math.round(Math.sqrt(basePieces / imgRatio)));
+            this.state.cols = Math.max(3, Math.round(this.state.rows * imgRatio));
+            
             this.generate();
             this.draw();
         };
@@ -440,44 +510,113 @@ const Game = {
         const { width, height } = this.canvas;
         const s = this.state;
         
-        // Mobile Responsive Layout
-        // Requirement: 96% width for puzzle canvas on mobile.
-        // On Desktop, maybe keep it smaller/reasonable.
+        // --- 1. Puzzle Dimensions Calculation ---
+        // Requirement: 96% width on mobile, constrained by available height to leave space for pieces.
         
-        let puzzleWidthPct = 0.96;
-        if (width > 800) puzzleWidthPct = 0.6; // Tablet/Desktop
+        const HEADER_HEIGHT = 80; // Approx header height + margin
+        const BOTTOM_MARGIN = 20;
+        const SIDE_MARGIN = width * 0.02; // 2% on each side
         
-        // The "Canvas" ID covers screen, but "puzzleRect" is the drawing area.
-        let targetW = width * puzzleWidthPct;
+        // Available vertical space
+        const availableHeight = height - HEADER_HEIGHT - BOTTOM_MARGIN;
         
-        // Ensure Aspect Ratio of Image (or square if needed?)
-        // Let's assume square pieces for now, so total ratio depends on Rows/Cols (which are equal now)
-        // But the image might be rectangular.
+        // Desired Width
+        let targetW = width * 0.96;
+        if (width > 800) targetW = width * 0.6; // Desktop/Tablet cap
         
         const imgRat = this.img.width / this.img.height;
         let targetH = targetW / imgRat;
         
-        // Check if H is too big
-        if (targetH > height * 0.7) {
-            targetH = height * 0.7;
-            targetW = targetH * imgRat;
+        // Height Constraint: We need space for loose pieces!
+        // Strategy: Ensure puzzle doesn't take more than 70% of available height.
+        // This leaves ~30% for loose pieces (split top/bottom).
+        const maxH = availableHeight * 0.75; 
+        
+        if (targetH > maxH) {
+            targetH = maxH;
+            // targetW remains fixed at 96% (or desktop width) as per "any cost of ratio" requirement.
+            // This ensures pieces have space in the remaining vertical area.
         }
         
+        // Final Puzzle Rect (Center vertically in available space below header)
+        // This naturally creates Top and Bottom gaps.
         const startX = (width - targetW) / 2;
-        const startY = (height - targetH) / 2;
+        const startY = HEADER_HEIGHT + (availableHeight - targetH) / 2;
         
         s.puzzleRect = { x: startX, y: startY, w: targetW, h: targetH };
         
         // Crop Calc
-        let cropX = 0, cropY = 0, cropW = this.img.width, cropH = this.img.height;
-        s.crop = { x: cropX, y: cropY, w: cropW, h: cropH };
+        s.crop = { x: 0, y: 0, w: this.img.width, h: this.img.height };
         
         const pieceW = targetW / s.cols;
         const pieceH = targetH / s.rows;
         
+        // --- 2. Piece Placement (Scattering) ---
+        // Define Safe Zones: Top Gap & Bottom Gap (excluding header & screen edges)
+        
+        const safeZones = [];
+        // Tab Protrusion Calculation: approx 25% of min(w,h) based on createPath
+        // We add a safety buffer of ~35-40% to be safe.
+        const maxTabSize = Math.max(pieceW, pieceH) * 0.45; 
+        const gapBuffer = 10; // Extra padding from puzzle/header/edge
+        const totalBuffer = maxTabSize + gapBuffer;
+        
+        // Top Zone: Between Header & Puzzle Top
+        // Height available: (startY - HEADER_HEIGHT)
+        // Usable Height: available - 2*totalBuffer (top and bottom padding for piece)
+        const topH = startY - HEADER_HEIGHT;
+        const usableTopH = topH - (2 * totalBuffer);
+        
+        if (usableTopH > pieceH) { // Only if piece fits with full buffers
+            safeZones.push({
+                x: SIDE_MARGIN + totalBuffer,
+                y: HEADER_HEIGHT + totalBuffer,
+                w: width - (SIDE_MARGIN * 2) - (2 * totalBuffer),
+                h: usableTopH
+            });
+        }
+        
+        // Bottom Zone: Between Puzzle Bottom & Screen Bottom
+        // Height available: (height - botY - BOTTOM_MARGIN)
+        const botY = startY + targetH;
+        const botH = height - botY - BOTTOM_MARGIN;
+        const usableBotH = botH - (2 * totalBuffer);
+        
+        if (usableBotH > pieceH) {
+             safeZones.push({
+                x: SIDE_MARGIN + totalBuffer,
+                y: botY + totalBuffer,
+                w: width - (SIDE_MARGIN * 2) - (2 * totalBuffer),
+                h: usableBotH
+            });
+        }
+        
+        // Side Zones (Only if wide enough, e.g., desktop or very square puzzle)
+        // On mobile 96% width, sides are tiny (2%), so likely ignored.
+        /* 
+         if (width - (startX + targetW) > pieceW) {
+             // Right side logic...
+         }
+        */
+        
+        // Fallback: If no safe zones (unlikely with 70% max constraints), enable overlapping on bottom but SAFE from edge.
+        if (safeZones.length === 0) {
+            // Force strict placement at bottom with buffer
+            const safeY = height - pieceH - totalBuffer - BOTTOM_MARGIN;
+            const safeX = SIDE_MARGIN + totalBuffer;
+            const safeW = width - (2 * (SIDE_MARGIN + totalBuffer));
+            
+            safeZones.push({
+                x: safeX, 
+                y: safeY > (botY + gapBuffer) ? safeY : (botY + gapBuffer), 
+                w: Math.max(pieceW, safeW), 
+                h: pieceH + 5 
+            });
+        }
+
         this.pieces = [];
         
-        // Generate Tabs
+        // Tab Generation
         const vTabs = [];
         for(let r=0; r<s.rows; r++) {
             vTabs[r] = [];
@@ -489,43 +628,22 @@ const Game = {
             for(let c=0; c<s.cols; c++) hTabs[r][c] = Math.random() > 0.5 ? 1 : -1;
         }
 
-        // Piece Placement (Outside Puzzle Area)
-        const headerH = 80;
-        const padding = 10;
-        
-        const getSafePos = () => {
-            // New Strategy:
-            // Define areas: Top, Bottom, Left, Right (surrounding puzzleRect)
-            // Prioritize areas with most space.
-            
-            const areas = [
-                { id: 'top', x: padding, y: headerH, w: width - 2*padding, h: startY - headerH },
-                { id: 'bottom', x: padding, y: startY + targetH, w: width - 2*padding, h: height - (startY + targetH) - padding },
-                { id: 'left', x: padding, y: headerH, w: startX - padding, h: height - headerH },
-                { id: 'right', x: startX + targetW, y: headerH, w: width - (startX + targetW) - padding, h: height - headerH }
-            ];
-            
-            // Filter usable areas (must hold at least one piece)
-            const usable = areas.filter(a => a.w > pieceW && a.h > pieceH);
-            
-            if (usable.length === 0) {
-                 // Fallback: Just put it anywhere (bottom usually)
-                 return { x: this.rand(padding, width - pieceW - padding), y: height - pieceH - padding };
-            }
-            
-            // Pick random area
-            const area = usable[Math.floor(Math.random() * usable.length)];
-            
-            // Random pos within area
-            const x = this.rand(area.x, area.x + area.w - pieceW);
-            const y = this.rand(area.y, area.y + area.h - pieceH);
-            
-            return {x, y};
-        };
-
         for (let r = 0; r < s.rows; r++) {
             for (let c = 0; c < s.cols; c++) {
-                const pos = getSafePos();
+                
+                // Pick a random zone
+                const zone = safeZones[Math.floor(Math.random() * safeZones.length)];
+                
+                // Random position within zone, strictly clamped
+                const maxPX = zone.w - pieceW;
+                const maxPY = zone.h - pieceH;
+                
+                // Ensure randomness doesn't break bounds if maxP is negative (swallow error, clamp to 0)
+                const finalMaxX = Math.max(0, maxPX);
+                const finalMaxY = Math.max(0, maxPY);
+                
+                const randX = zone.x + Math.random() * finalMaxX;
+                const randY = zone.y + Math.random() * finalMaxY;
                 
                 const tabs = {
                     top: r === 0 ? 0 : -hTabs[r-1][c],
@@ -540,7 +658,8 @@ const Game = {
                     r, c,
                     cx: startX + c * pieceW,
                     cy: startY + r * pieceH,
-                    x: pos.x, y: pos.y,
+                    x: randX, 
+                    y: randY,
                     w: pieceW, h: pieceH,
                     tabs,
                     path,
@@ -637,8 +756,24 @@ const Game = {
         const pos = this.getPos(e);
         const p = this.state.selectedPiece;
         
-        p.x = pos.x - this.state.dragOffset.x;
-        p.y = pos.y - this.state.dragOffset.y;
+        let newX = pos.x - this.state.dragOffset.x;
+        let newY = pos.y - this.state.dragOffset.y;
+        
+        // Strict Boundary Checks (Prevent dragging off-screen)
+        // Account for Tabs protruding
+        const maxTabSize = Math.max(p.w, p.h) * 0.45; 
+        
+        // Check X
+        if (newX < maxTabSize) newX = maxTabSize;
+        if (newX + p.w + maxTabSize > this.canvas.width) newX = this.canvas.width - p.w - maxTabSize;
+        
+        // Check Y (Account for Header)
+        const HEADER_BOUND = 80;
+        if (newY < HEADER_BOUND + maxTabSize) newY = HEADER_BOUND + maxTabSize;
+        if (newY + p.h + maxTabSize > this.canvas.height) newY = this.canvas.height - p.h - maxTabSize;
+        
+        p.x = newX;
+        p.y = newY;
         this.draw();
     },
     
