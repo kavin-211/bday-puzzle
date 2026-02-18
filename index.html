@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Puzzle Master: Bday Edition</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1a0b1c">
+</head>
+<body>
+    <div id="app">
+        <!-- Login Modal -->
+        <div id="login-modal" class="modal">
+            <div class="glass-panel login-panel">
+                <h2>Welcome</h2>
+                <p>Please sign in to continue your journey.</p>
+                <form id="login-form">
+                    <input type="email" id="email-input" placeholder="kenrich@gmail.com" class="glass-input" required>
+                    <div id="login-error" class="error-msg"></div>
+                    <button type="submit" class="primary-btn pulse">Login</button>
+                </form>
+                
+                <!-- Install Promo -->
+                <div class="install-promo">
+                    <p>Install & play for better experience</p>
+                    <button id="login-install-btn" class="install-promo-btn">Install</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Start Modal (For logged in users) -->
+        <div id="start-modal" class="modal hidden">
+            <div class="glass-panel">
+                <h2>Welcome Back!</h2>
+                <p>Ready to continue?</p>
+                <button id="start-btn" class="primary-btn pulse">Start to Play</button>
+            </div>
+        </div>
+
+        <!-- Game Interface -->
+        <div id="game-interface" class="hidden">
+            <header class="glass-header" id="main-header">
+                <div class="header-content">
+                    <h1 id="stage-title">Stage 1</h1>
+                    <span class="subtitle">Double tap title for Admin</span>
+                </div>
+                <button id="logout-btn" class="icon-btn logout-btn-header" title="Logout">
+                    ⏻ <!-- Power icon or similar -->
+                </button>
+            </header>
+            
+            <div id="game-canvas-container">
+                <canvas id="puzzle-canvas"></canvas>
+            </div>
+
+            <!-- Level Complete Modal -->
+            <div id="complete-modal" class="modal hidden">
+                <div class="glass-panel">
+                    <h2>Beautiful!</h2>
+                    <p>Memory Restored.</p>
+                    <button id="next-level-btn" class="primary-btn pulse">Next Stage</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Dashboard -->
+        <div id="admin-modal" class="modal hidden" style="z-index: 2000;">
+            <div class="glass-panel admin-panel">
+                <div class="admin-header">
+                    <h2>Admin Dashboard</h2>
+                    <button id="close-admin" class="icon-btn">×</button>
+                </div>
+                <div class="table-wrapper">
+                    <table id="admin-table">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Level</th>
+                                <th>Last Active</th>
+                                <th>Installed</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-tbody">
+                            <!-- Rows injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin User History Modal -->
+        <div id="history-modal" class="modal hidden" style="z-index: 3000;">
+            <div class="glass-panel admin-panel">
+                <div class="admin-header">
+                    <h2 id="history-user-title">User History</h2>
+                    <button id="close-history" class="icon-btn">×</button>
+                </div>
+                <div class="table-wrapper">
+                    <table id="history-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>In-Time</th>
+                                <th>Out-Time</th>
+                                <th>Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-tbody">
+                            <!-- Rows injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logout Confirmation Modal -->
+        <div id="logout-confirm-modal" class="modal hidden" style="z-index: 4000;">
+            <div class="glass-panel">
+                <h2>Logout</h2>
+                <p>Are you sure you want to logout?</p>
+                <div style="margin-top: 1.5rem; display: flex; justify-content: space-around;">
+                    <button id="cancel-logout-btn" class="primary-btn" style="background: transparent; border: 1px solid var(--primary-color); color: var(--text-color);">Cancel</button>
+                    <button id="confirm-logout-btn" class="primary-btn">Logout</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Floating Install Trigger (Hidden by default, used if triggered outside login) -->
+        <div id="install-trigger" class="install-btn hidden">
+            ⬇️
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('SW registered', reg))
+                .catch(err => console.log('SW failed', err));
+        }
+    </script>
+</body>
+</html>

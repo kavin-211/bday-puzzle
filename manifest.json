@@ -1,0 +1,20 @@
+{
+  "name": "Puzzle Master: Bday Edition",
+  "short_name": "PuzzleMaster",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1a0b1c",
+  "theme_color": "#1a0b1c",
+  "icons": [
+    {
+      "src": "assets/images/stage_5.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/images/stage_5.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

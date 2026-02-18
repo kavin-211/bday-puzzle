@@ -1,0 +1,334 @@
+:root {
+    --bg-color: #ffe4e1;
+    /* Misty Rose */
+    --bg-gradient: linear-gradient(135deg, #ffe4e1 0%, #ffb6c1 100%);
+    /* Light Pink to Light Pink */
+    --primary-color: #ff1493;
+    /* Deep Pink */
+    --primary-glow: rgba(255, 20, 147, 0.5);
+    --text-color: #880e4f;
+    /* Dark Pink/Red */
+    --glass-bg: rgba(255, 255, 255, 0.25);
+    --glass-border: rgba(255, 255, 255, 0.4);
+    --font-heading: 'Playfair Display', serif;
+    --font-body: 'Lato', sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    margin: 0;
+    padding: 0;
+    background: var(--bg-gradient);
+    color: var(--text-color);
+    font-family: var(--font-body);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    /* Heart Background Pattern */
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 45 C 30 45, 10 25, 10 15 C 10 5, 20 5, 30 15 C 40 5, 50 5, 50 15 C 50 25, 30 45, 30 45 Z' fill='%23ff69b4' fill-opacity='0.1'/%3E%3C/svg%3E");
+}
+
+#app {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Modals */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 192, 203, 0.85);
+    /* Pinkish overlay */
+    backdrop-filter: blur(5px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    transition: opacity 0.3s;
+}
+
+.modal.hidden {
+    opacity: 0;
+    pointer-events: none;
+    display: none;
+}
+
+.glass-panel {
+    background: rgba(255, 255, 255, 0.8);
+    border: 2px solid var(--primary-color);
+    padding: 2rem;
+    border-radius: 25px;
+    /* Softer corners */
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(255, 20, 147, 0.2);
+    max-width: 90%;
+    width: 400px;
+}
+
+/* Login */
+.glass-input {
+    width: 100%;
+    padding: 12px;
+    margin: 1rem 0;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid var(--primary-color);
+    border-radius: 12px;
+    color: var(--text-color);
+    font-size: 1rem;
+    outline: none;
+}
+
+.glass-input::placeholder {
+    color: rgba(136, 14, 79, 0.5);
+}
+
+.glass-input:focus {
+    box-shadow: 0 0 10px var(--primary-glow);
+}
+
+.error-msg {
+    color: #d32f2f;
+    font-size: 0.9rem;
+    height: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Header */
+.glass-header {
+    position: absolute;
+    /* Keep it absolute so canvas can go under if needed, but usually we want it on top */
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 0.8rem;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--primary-color);
+    z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    /* Changed to space-between for logout button */
+    align-items: center;
+}
+
+.header-content {
+    text-align: center;
+    flex-grow: 1;
+    /* Center title */
+}
+
+h1 {
+    font-family: var(--font-heading);
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--primary-color);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.subtitle {
+    font-size: 0.7rem;
+    opacity: 0.8;
+    letter-spacing: 1px;
+    color: var(--text-color);
+}
+
+/* Canvas */
+#game-canvas-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    /* Use flex to center canvas */
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+canvas {
+    display: block;
+    /* Canvas size is controlled by JS, but we ensure it doesn't overflow container trivially */
+    max-width: 100%;
+    max-height: 100%;
+}
+
+/* Admin & History Tables */
+.admin-panel {
+    width: 95%;
+    /* Wider on mobile */
+    max-width: 800px;
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+    background: #fff0f5;
+    /* Lavender Blush */
+}
+
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 0.5rem;
+}
+
+.table-wrapper {
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    /* Smaller font for mobile */
+}
+
+th,
+td {
+    padding: 0.8rem 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 20, 147, 0.2);
+}
+
+th {
+    color: var(--primary-color);
+    position: sticky;
+    top: 0;
+    background: #fff0f5;
+    font-weight: bold;
+    z-index: 10;
+}
+
+/* Buttons */
+.icon-btn {
+    background: transparent;
+    border: none;
+    color: var(--primary-color);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0 10px;
+}
+
+.logout-btn-header {
+    font-size: 1.2rem;
+}
+
+.primary-btn {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.8rem 2rem;
+    border-radius: 50px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 1rem;
+    margin-top: 1rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.primary-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px var(--primary-glow);
+    background: #c51162;
+}
+
+.pulse {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 var(--primary-glow);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(255, 20, 147, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 20, 147, 0);
+    }
+}
+
+/* Install Promo on Login */
+.install-promo {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.install-promo p {
+    font-size: 0.8rem;
+    margin: 0;
+    color: var(--text-color);
+    opacity: 0.9;
+}
+
+.install-promo-btn {
+    background: white;
+    color: var(--primary-color);
+    border: 2px solid var(--primary-color);
+    padding: 0.5rem 1.5rem;
+    border-radius: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.install-promo-btn:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+/* Floating Install Trigger (if needed elsewhere) */
+.install-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    background: var(--primary-color);
+    color: white;
+    border: 3px solid white;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5rem;
+    cursor: pointer;
+    z-index: 500;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s;
+}
+
+.install-btn:active {
+    transform: scale(0.9);
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Utility for text-link */
+.text-link {
+    color: var(--primary-color);
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+/* Custom Alert/Confirm Dialog Styles could be added here if not using system alerts,
+   but we'll use a modal for the history and logout confirm. */
