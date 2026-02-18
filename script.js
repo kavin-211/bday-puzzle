@@ -146,6 +146,7 @@ const UI = {
     },
     
     init() {
+        console.log('UI: Initializing Puzzle Master...');
         this.bindEvents();
         
         // PWA Install
@@ -282,6 +283,7 @@ const UI = {
     },
     
     showLogin() {
+        console.log('UI: Showing Login Modal');
         this.screens.login.classList.remove('hidden');
         this.screens.start.classList.add('hidden');
         this.screens.game.classList.add('hidden');
@@ -799,7 +801,8 @@ const Game = {
         if (this.pieces.every(p => p.locked)) {
             const user = State.user;
             if(user) {
-                DB.updateLevel(user.email, user.currentLevel + 1);
+                user.currentLevel++; // Update memory state immediately
+                DB.updateLevel(user.email, user.currentLevel); // Update Storage
                 DB.recordSessionEnd(user.email); // Optionally end session on complete? Or keep going.
                 document.getElementById('complete-modal').classList.remove('hidden');
             }
